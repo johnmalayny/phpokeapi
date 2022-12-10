@@ -13,6 +13,8 @@ use PHPUnit\Framework\TestCase;
 use PokeAPI\Pokemon\Pokemon;
 use PokeAPI\Pokemon\Species;
 use PokeAPI\Pokemon\Variety;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Component\Cache\Adapter\NullAdapter;
 use Symfony\Component\Cache\Simple\NullCache;
 
 /**
@@ -29,10 +31,10 @@ class ClientIntegrationTest extends TestCase
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         // we want to avoid caching results
-        $cache = new NullCache();
+        $cache = new FilesystemAdapter();
         $this->client = new Client(
             'https://pokeapi.co/api/v2/',
             $cache

@@ -2,60 +2,62 @@
 
 namespace PokeAPI;
 
-use Doctrine\Common\Collections\ArrayCollection;
-use JMS\Serializer\SerializerInterface;
-use PokeAPI\Exception\NetworkException;
-use PokeAPI\JMS\Serializer\PokeApiJmsSerializerBuilder;
-use PokeAPI\Pokemon\Ability;
 use PokeAPI\Pokemon\Area;
-use PokeAPI\Pokemon\Berry;
-use PokeAPI\Pokemon\BerryFirmness;
-use PokeAPI\Pokemon\BerryFlavor;
-use PokeAPI\Pokemon\Characteristic;
-use PokeAPI\Pokemon\Color;
-use PokeAPI\Pokemon\ContestEffect;
-use PokeAPI\Pokemon\ContestType;
-use PokeAPI\Pokemon\EggGroup;
-use PokeAPI\Pokemon\EncounterCondition;
-use PokeAPI\Pokemon\EncounterConditionValue;
-use PokeAPI\Pokemon\EncounterMethod;
-use PokeAPI\Pokemon\EvolutionChain;
-use PokeAPI\Pokemon\EvolutionTrigger;
-use PokeAPI\Pokemon\Gender;
-use PokeAPI\Pokemon\Generation;
-use PokeAPI\Pokemon\GrowthRate;
-use PokeAPI\Pokemon\Habitat;
 use PokeAPI\Pokemon\Item;
-use PokeAPI\Pokemon\ItemAttribute;
-use PokeAPI\Pokemon\ItemCategory;
-use PokeAPI\Pokemon\ItemFlingEffect;
-use PokeAPI\Pokemon\ItemPocket;
-use PokeAPI\Pokemon\Location;
-use PokeAPI\Pokemon\Machine;
 use PokeAPI\Pokemon\Move;
-use PokeAPI\Pokemon\MoveAilment;
-use PokeAPI\Pokemon\MoveBattleStyle;
-use PokeAPI\Pokemon\MoveCategory;
-use PokeAPI\Pokemon\MoveDamageClass;
-use PokeAPI\Pokemon\MoveLearnMethod;
-use PokeAPI\Pokemon\MoveTarget;
+use PokeAPI\Pokemon\Stat;
+use PokeAPI\Pokemon\Type;
+use PokeAPI\Pokemon\Berry;
+use PokeAPI\Pokemon\Color;
+use PokeAPI\Pokemon\Shape;
+use PokeAPI\Pokemon\Gender;
 use PokeAPI\Pokemon\Nature;
-use PokeAPI\Pokemon\PalParkArea;
-use PokeAPI\Pokemon\PokeathlonStat;
+use PokeAPI\Pokemon\Region;
+use PokeAPI\Pokemon\Ability;
+use PokeAPI\Pokemon\Habitat;
+use PokeAPI\Pokemon\Machine;
 use PokeAPI\Pokemon\Pokedex;
 use PokeAPI\Pokemon\Pokemon;
-use PokeAPI\Pokemon\PokemonForm;
-use PokeAPI\Pokemon\Region;
-use PokeAPI\Pokemon\Shape;
 use PokeAPI\Pokemon\Species;
-use PokeAPI\Pokemon\Stat;
-use PokeAPI\Pokemon\SuperContestEffect;
-use PokeAPI\Pokemon\Type;
+use PokeAPI\Pokemon\Version;
+use PokeAPI\Pokemon\EggGroup;
+use PokeAPI\Pokemon\Location;
+use PokeAPI\Pokemon\Generation;
+use PokeAPI\Pokemon\GrowthRate;
+use PokeAPI\Pokemon\ItemPocket;
+use PokeAPI\Pokemon\MoveTarget;
+use PokeAPI\Pokemon\BerryFlavor;
+use PokeAPI\Pokemon\ContestType;
+use PokeAPI\Pokemon\MoveAilment;
+use PokeAPI\Pokemon\PalParkArea;
+use PokeAPI\Pokemon\PokemonForm;
+use PokeAPI\Pokemon\ItemCategory;
+use PokeAPI\Pokemon\MoveCategory;
 use PokeAPI\Pokemon\VersionGroup;
-use ProxyManager\Factory\LazyLoadingValueHolderFactory;
+use PokeAPI\Pokemon\BerryFirmness;
+use PokeAPI\Pokemon\ContestEffect;
+use PokeAPI\Pokemon\ItemAttribute;
+use PokeAPI\Pokemon\Characteristic;
+use PokeAPI\Pokemon\EvolutionChain;
+use PokeAPI\Pokemon\PokeathlonStat;
+use PokeAPI\Pokemon\EncounterMethod;
+use PokeAPI\Pokemon\ItemFlingEffect;
+use PokeAPI\Pokemon\MoveBattleStyle;
+use PokeAPI\Pokemon\MoveDamageClass;
+use PokeAPI\Pokemon\MoveLearnMethod;
+use PokeAPI\Pokemon\EvolutionTrigger;
+use JMS\Serializer\SerializerInterface;
+use PokeAPI\Exception\NetworkException;
+use PokeAPI\Pokemon\EncounterCondition;
+use PokeAPI\Pokemon\SuperContestEffect;
+use Symfony\Contracts\Cache\CacheInterface;
+use PokeAPI\Pokemon\EncounterConditionValue;
 use ProxyManager\Proxy\LazyLoadingInterface;
-use Psr\SimpleCache\CacheInterface;
+use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Cache\Simple\FilesystemCache;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use PokeAPI\JMS\Serializer\PokeApiJmsSerializerBuilder;
+use ProxyManager\Factory\LazyLoadingValueHolderFactory;
 
 /**
  * Class Client
@@ -63,25 +65,13 @@ use Symfony\Component\Cache\Simple\FilesystemCache;
  */
 class Client
 {
-    /**
-     * @var string
-     */
-    private $baseUrl;
+    private string $baseUrl;
 
-    /**
-     * @var CacheInterface
-     */
-    private $cache;
+    private FilesystemAdapter $cache;
 
-    /**
-     * @var SerializerInterface
-     */
-    private $serializer;
+    private SerializerInterface $serializer;
 
-    /**
-     * @var callable
-     */
-    private $callback;
+    private callable $callback;
 
     /**
      * Client constructor.
@@ -89,10 +79,10 @@ class Client
      * @param CacheInterface $cache
      * @param SerializerInterface $serializer
      */
-    public function __construct(string $url = 'https://pokeapi.co/api/v2/', CacheInterface $cache = null, SerializerInterface $serializer = null, callable $callback = null)
+    public function __construct(string $url = 'https://pokeapi.co/api/v2/', FilesystemAdapter $cache = null, SerializerInterface $serializer = null, callable $callback = null)
     {
         $this->baseUrl = $url;
-        $this->cache = $cache ?: new FilesystemCache('pokeapi');
+        $this->cache = $cache ?: new FilesystemAdapter('pokeapi');
         $this->serializer = $serializer ?: PokeApiJmsSerializerBuilder::build($this);
         $this->callback = is_callable($callback) ? $callback : $this->getDefaultCallback();
     }
@@ -638,8 +628,10 @@ class Client
         $url .= str_replace($url, '', $identifier);
         $cache_key = urlencode($url);
 
-        if ($this->cache->has($cache_key)) {
-            return $this->deserialize($className, $this->cache->get($cache_key));
+        if ($this->cache->get($cache_key, function() use ($className, $cache_key){
+            return $this->deserialize($className, $this->cache->getItem($cache_key)->get());
+        })) {
+            
         }
 
         $callback = $this->callback;
@@ -652,7 +644,7 @@ class Client
 
         $data = json_encode($data);
 
-        $this->cache->set($cache_key, $data);
+        $this->cache->getItem($cache_key)->set($data);
 
         return $this->deserialize($className, $data);
     }

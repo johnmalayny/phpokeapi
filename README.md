@@ -1,6 +1,8 @@
 # PHPokéAPI
 
-A PHP7.1+ wrapper for PokéAPI. This package offers the possibility to query the majority of the PokéAPI endpoints (see exceptions below). It supports caching of responses and lazy-loading relations.
+This is a fork of https://github.com/lmerotta/phpokeapi to allow for php8.0 support.
+
+A PHP8.0 wrapper for PokéAPI. This package offers the possibility to query the majority of the PokéAPI endpoints (see exceptions below). It supports caching of responses and lazy-loading relations.
 
 ## Installation
 
