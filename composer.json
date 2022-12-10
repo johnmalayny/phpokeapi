@@ -1,5 +1,5 @@
 {
-    "name": "lmerotta/phpokeapi",
+    "name": "johnmalayny/phpokeapi",
     "description": "A PHP8.0 Wrapper for PokéAPI, with cache and lazy-loading",
     "type": "library",
     "require": {
